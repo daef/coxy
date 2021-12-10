@@ -47,7 +47,7 @@ def create_runner():
     return web.AppRunner(app)
 
 
-async def start_server(host="127.0.0.1", port=1337):
+async def start_server(host, port):
     runner = create_runner()
     await runner.setup()
     site = web.TCPSite(runner, host, port)
