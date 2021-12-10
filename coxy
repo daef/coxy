@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+"""coxy
+
+Usage:
+  coxy <URL> [options] [--help] <PROG>
+
+Connect to coxy server at URL, share PROG.
+
+Options:
+  --help                 show this help message and exit
+  -v, --version          show version
+  -n, --name=<name>      identify yourself [default: hostname]
+"""
+
+from docopt import docopt
+from aiohttp import ClientSession, WSMsgType
+import asyncio
+import re
+import json
+import socket
+import subprocess
+import shlex
+import time
+
+async def main(url, prog, name):
+    session = ClientSession()
+    ws = await session.ws_connect(url)
+    proc = None
+    start = time.time()
+
+    async def send(typ, msg):
+        msg['type'] = typ
+        msg['ts'] = time.time()-start
+        await ws.send_str(json.dumps(msg))
+
+
+    await send('hello', {'name': name})
+    await send('subscribe', {'filter': 'reset'})
+    while True:
+        if proc:
+            if proc.poll() == None:
+                try:
+                    stderr = proc.stdout.readline().decode('utf-8')
+                    await send('stderr', {'data': stderr})
+                except IOError:
+                    pass
+                try:
+                    stdout = proc.stdout.readline().decode('utf-8')
+                    await send('stdout', {'data': stdout})
+                except IOError:
+                    pass
+            else:
+                await send('exit', {'code': proc.returncode})
+                proc = None
+        try:
+            #msg = await ws.receive()
+            msg = await asyncio.wait_for(ws.receive(), timeout=.1)
+            print(msg)
+            if msg.type == WSMsgType.TEXT:
+                cmd = json.loads(msg.data)
+                t = cmd['type']
+                if t == 'reset':
+                    start = time.time()
+                    proc = subprocess.Popen(prog, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if msg.data == 'close':
+                    await ws.close()
+                    break
+            elif msg.type == WSMsgType.CLOSED:
+                break
+            elif msg.type == WSMsgType.ERROR:
+                break
+        except asyncio.TimeoutError:
+            pass
+    if proc:
+        proc.terminate() # or .kill()?
+
+
+if __name__ == "__main__":
+    arguments = docopt(__doc__.replace('hostname', socket.gethostname()), version='coxy v0') 
+    print(arguments)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(
+        main(
+            arguments['<URL>'],
+            shlex.split(arguments['<PROG>']),
+            arguments['--name']))
+    loop.run_forever()
+

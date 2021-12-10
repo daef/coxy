@@ -12,26 +12,58 @@ Options:
 """
 
 from docopt import docopt
-from aiohttp import web, WSCloseCode
+from aiohttp import web, WSCloseCode, WSMsgType
 import asyncio
-
+import re
+import json
 
 
 async def http_handler(request):
     return web.FileResponse('web/index.html')
 
+clients = []
+subs = []
 
 async def websocket_handler(request):
+    global clients
+    global subs
     ws = web.WebSocketResponse()
+    client = {'ws': ws}
+    clients.append(client)
+
+    print(f'handler {request}')
     await ws.prepare(request)
 
     async for msg in ws:
-        if msg.type == aiohttp.WSMsgType.TEXT:
-            if msg.data == 'close':
+        if msg.type == WSMsgType.TEXT:
+            print(f'msg :{msg.data}:')
+            cmd = json.loads(msg.data)
+            t = cmd['type']
+            if t == 'hello':
+                n = cmd['name']
+                names = [c['name'] for c in clients if 'name' in c]
+                while n in names:
+                    n += '_'
+                cmd['name'] = n
+                for c in clients:
+                    if c['ws'] == ws:
+                        client['name'] = n
+            elif t == 'subscribe':
+                subs.append({'filter': re.compile(cmd['filter']), 'ws': ws})
+            elif t == 'close':
+                clients.remove(ws)
                 await ws.close()
-            else:
-                await ws.send_str('some websocket message payload')
-        elif msg.type == aiohttp.WSMsgType.ERROR:
+
+            cmd['from'] = client.get('name', '')
+            for sub in subs:
+                if sub['filter'].match(t):
+                    try:
+                        await sub['ws'].send_str(json.dumps(cmd))
+                    except:
+                        # maybe remove client?
+                        pass
+        elif msg.type == WSMsgType.ERROR:
+            clients.remove(ws)
             print('ws connection closed with exception %s' % ws.exception())
 
     return ws
@@ -40,9 +72,9 @@ async def websocket_handler(request):
 def create_runner():
     app = web.Application()
     app.add_routes([
+        web.get('/ws', websocket_handler),
         web.get('/',   http_handler),
         web.static('/',  'web'),
-        web.get('/ws', websocket_handler),
     ])
     return web.AppRunner(app)
 
