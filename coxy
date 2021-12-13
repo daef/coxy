@@ -21,6 +21,7 @@ import socket
 import subprocess
 import shlex
 import time
+import select
 
 async def main(url, prog, name):
     session = ClientSession()
@@ -35,20 +36,19 @@ async def main(url, prog, name):
 
 
     await send('hello', {'name': name})
-    await send('subscribe', {'filter': 'reset'})
+    await send('subscribe', {'filter': 'reset|stdin'})
     while True:
         if proc:
             if proc.poll() == None:
-                try:
-                    stderr = proc.stderr.readline().decode('utf-8')
-                    await send('stderr', {'data': stderr})
-                except IOError:
-                    pass
-                try:
+                of = proc.stdout.fileno()
+                ef = proc.stderr.fileno()
+                res = select.select([of, ef], [], [], .1)
+                if of in res[0]:
                     stdout = proc.stdout.readline().decode('utf-8')
                     await send('stdout', {'data': stdout})
-                except IOError:
-                    pass
+                if ef in res[0]:
+                    stderr = proc.stderr.readline().decode('utf-8')
+                    await send('stderr', {'data': stderr})
             else:
                 await send('exit', {'code': proc.returncode})
                 proc = None
@@ -61,8 +61,11 @@ async def main(url, prog, name):
                 t = cmd['type']
                 if t == 'reset':
                     start = time.time()
-                    proc = subprocess.Popen(prog, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                if msg.data == 'close':
+                    proc = subprocess.Popen(prog, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                elif t == 'stdin':
+                    if proc and proc.poll() == None:
+                        proc.stdin.write(f"{cmd['data']}\n".encode('utf-8'))
+                elif t == 'close':
                     await ws.close()
                     break
             elif msg.type == WSMsgType.CLOSED:
@@ -77,7 +80,6 @@ async def main(url, prog, name):
 
 if __name__ == "__main__":
     arguments = docopt(__doc__.replace('hostname', socket.gethostname()), version='coxy v0') 
-    print(arguments)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
         main(

@@ -23,6 +23,9 @@ function main() {
   document.getElementById('reset').addEventListener('click', function(event) {
     socket.send(JSON.stringify({'type': 'reset'}))
   })
+  document.getElementById('send_hello').addEventListener('click', function(event) {
+    socket.send(JSON.stringify({'type': 'stdin', 'data': 'hello'}))
+  })
 }
 
 main()
