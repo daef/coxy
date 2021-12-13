@@ -40,7 +40,7 @@ async def main(url, prog, name):
         if proc:
             if proc.poll() == None:
                 try:
-                    stderr = proc.stdout.readline().decode('utf-8')
+                    stderr = proc.stderr.readline().decode('utf-8')
                     await send('stderr', {'data': stderr})
                 except IOError:
                     pass
