@@ -24,7 +24,16 @@ function main() {
     socket.send(JSON.stringify({'type': 'reset'}))
   })
   document.getElementById('send_hello').addEventListener('click', function(event) {
-    socket.send(JSON.stringify({'type': 'stdin', 'data': 'hello'}))
+    socket.send(JSON.stringify({'type': 'stdin', 'data': 'hello\n'}))
+  })
+  document.getElementById('send_world').addEventListener('click', function(event) {
+    socket.send(JSON.stringify({'type': 'stdin', 'data': 'world\n'}))
+  })
+  document.getElementById('send_EOF').addEventListener('click', function(event) {
+    socket.send(JSON.stringify({'type': 'eof'}))
+  })
+  document.getElementById('kill').addEventListener('click', function(event) {
+    socket.send(JSON.stringify({'type': 'kill'}))
   })
 }
 

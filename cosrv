@@ -64,6 +64,9 @@ async def websocket_handler(request):
                         pass
         elif msg.type == WSMsgType.ERROR:
             clients.remove(ws)
+            rmsubs = list([s for s in subs if s['ws'] == ws])
+            for s in rmsubs:
+                subs.remove(s)
             print('ws connection closed with exception %s' % ws.exception())
 
     return ws

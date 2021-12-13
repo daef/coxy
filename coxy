@@ -36,7 +36,7 @@ async def main(url, prog, name):
 
 
     await send('hello', {'name': name})
-    await send('subscribe', {'filter': 'reset|stdin'})
+    await send('subscribe', {'filter': 'reset|stdin|kill|eof'})
     while True:
         if proc:
             if proc.poll() == None:
@@ -64,7 +64,14 @@ async def main(url, prog, name):
                     proc = subprocess.Popen(prog, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 elif t == 'stdin':
                     if proc and proc.poll() == None:
-                        proc.stdin.write(f"{cmd['data']}\n".encode('utf-8'))
+                        proc.stdin.write(cmd['data'].encode('utf-8'))
+                        proc.stdin.write(cmd['data'].encode('utf-8'))
+                elif t == 'kill':
+                    if proc and proc.poll() == None:
+                        proc.kill()
+                elif t == 'eof':
+                    if proc and proc.poll() == None:
+                        proc.stdin.close()
                 elif t == 'close':
                     await ws.close()
                     break
