@@ -65,7 +65,6 @@ async def main(url, prog, name):
                 elif t == 'stdin':
                     if proc and proc.poll() == None:
                         proc.stdin.write(cmd['data'].encode('utf-8'))
-                        proc.stdin.write(cmd['data'].encode('utf-8'))
                 elif t == 'kill':
                     if proc and proc.poll() == None:
                         proc.kill()
