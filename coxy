@@ -44,10 +44,10 @@ async def main(url, prog, name):
                 ef = proc.stderr.fileno()
                 res = select.select([of, ef], [], [], .1)
                 if of in res[0]:
-                    stdout = proc.stdout.readline().decode('utf-8')
+                    stdout = proc.stdout.read(999).decode('utf-8')
                     await send('stdout', {'data': stdout})
                 if ef in res[0]:
-                    stderr = proc.stderr.readline().decode('utf-8')
+                    stderr = proc.stderr.read(999).decode('utf-8')
                     await send('stderr', {'data': stderr})
             else:
                 await send('exit', {'code': proc.returncode})
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     loop.run_until_complete(
         main(
             arguments['<URL>'],
-            shlex.split(arguments['<PROG>']),
+            ['stdbuf', '-o0', '-e0', '-i0'] + shlex.split(arguments['<PROG>']),
             arguments['--name']))
     loop.run_forever()
 
