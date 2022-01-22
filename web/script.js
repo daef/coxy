@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', main, false);
 var content = new Object;
 var main_id = -1;
 var second_id = -1;
-const startmessate = `<div id="start_message" style="display: grid; place-items: center;"><p style="margin-top: 100px; text-align: center;">Please select two connected clients to compare their output<br>(You have to send some data to get clients to select)</p></div>`;
+const startmessage = `<div id="start_message" style="display: grid; place-items: center;"><p style="margin-top: 100px; text-align: center;">Please select two connected clients to compare their output<br>(You have to send some data to get clients to select)</p></div>`;
 
 function get_ws_uri() {
   var loc = window.location, uri
@@ -93,7 +93,7 @@ function main() {
     }
   });
 
-  $('#content').html(startmessate);
+  $('#content').html(startmessage);
 }
 
 function select_comparison_second(id)
@@ -123,7 +123,7 @@ function checkCompareable()
 function clearOutput()
 {
   //console.log("Clearing output view");
-  $('#content').html(startmessate);
+  $('#content').html(startmessage);
   content = new Object;
 }
 
@@ -252,6 +252,5 @@ function printToDiffSection(diff)
       $('#diff_content').append(`<span class="del">${item[1]}</span>`);
     }
   });
-  $('#diff_content').append(`<hr>`);
-  $('#diff_content').append(`<br><br>&nbsp;`);
+  $('#diff_content').append(`<hr><br><br>&nbsp;`);
 }
