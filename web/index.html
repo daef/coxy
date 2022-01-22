@@ -18,9 +18,10 @@
 			  src="https://code.jquery.com/jquery-3.6.0.min.js"
 			  integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
 			  crossorigin="anonymous"></script>
-    <script src="script.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js" integrity="sha512-5YZxUisfaneUbwv58nPp10qwt6DefHuJ+iAfvPoABZAYwLg4WGJHITaLpyyxJdrljfc0ggUoWc87Z0lfoDS84Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="script.js"></script>
 
-  </head>
+
   <style>
 
     textarea:hover,
@@ -41,73 +42,127 @@
       box-shadow: none !important;
     }
 
-    .nav_btn
+    .green_text, .nav_btn
     {
       color: #0f0;
+    }
+
+    .nav_btn
+    {
       background-color: #1e4018;
     }
 
+    .nav_btn:hover
+    {
+      color: #0f0;
+      background-color: #009D02;
+    }
+
+    .input_border
+    {
+      border-width: 0px 0px 1px 0px;
+      border-color: #0D9405;
+    }
+
+    .client_col
+    {
+      outline-color: green;
+      outline-width: 1px;
+      outline-style: solid;
+    }
+
+    .common
+    {
+      color: grey;
+    }
+
+    .add
+    {
+      color: green;
+    }
+
+    .del
+    {
+      color: red;
+      text-decoration: line-through;
+    }
+
+    .nav-link:hover
+    {
+      color: grey;
+    }
+
   </style>
-
-  <body style="background-color: #3c3c3c;">
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#" style="color: rgb(81, 255, 0); letter-spacing: 2px; font-weight: 600;">$_ Coxy</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-          <div class="navbar-nav">
-            <a class="nav-link" href="https://github.com/daef/coxy" style="color: #0f0;">Github</a>
-          </div>
-        </div>
-        <div class="d-none d-lg-inline" style="float: right;">
-          <button class="btn mx-1 nav_btn" id="reset">Reset</button>
-          <button class="btn mx-1 nav_btn" id="kill">Kill</button>
-          <button class="btn mx-1 nav_btn" id="send_EOF">EOF</button>
-          <button class="btn mx-1 nav_btn" id="clear_log">Clear</button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="container-fluid mt-5 mb-5">
-      <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-10 col-xl-8 col-xxl-5">
-          <!-- Output -->
-          <div class="mt-3 ouput_log" id="output_log"></div>
-        </div>
+</head>
+<body style="background-color: #1C1C1C;">
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#" style="color: rgb(81, 255, 0); letter-spacing: 2px; font-weight: 600;">$_ Coxy</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active green_text" aria-current="page" href="https://github.com/daef/coxy">Github</a>
+          </li>
+          <li class="nav-item navbar-text">
+            <span class="d-none d-lg-inline">&nbsp;&nbsp;|&emsp;</span>Compare
+          </li>
+          <li class="nav-item dropdown px-1">
+            <a class="nav-link dropdown-toggle" href="#" id="compare_drop_down" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="green_text" id="second_id_label">(select client)</span>
+            </a>
+            <ul class="dropdown-menu" id="compare_drop_down_selects" style="background-color: #004502; opacity: 0.7" aria-labelledby="compare_drop_down"></ul>
+          </li>
+          <li class="nav-item navbar-text">
+            to
+          </li>
+          <li class="nav-item dropdown px-1">
+            <a class="nav-link dropdown-toggle" href="#" id="main_drop_down" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="green_text" id="main_id_label">(select main client)</span>
+            </a>
+            <ul class="dropdown-menu" id="main_drop_down_selects" style="background-color: #004502; opacity: 0.7" aria-labelledby="main_drop_down"></ul>
+          </li>
+        </ul>
+        <ul class="navbar-nav navbar-right">
+          <li class="nav-item d-none d-lg-block">
+            <button class="btn mx-1 px-4 nav_btn my-2 my-lg-0" id="reset_desktop">Reset<br><span style="font-size: 10px;">ctrl + alt + [R]</span></button>
+          </li>
+          <li class="nav-item d-block d-lg-none">
+            <button class="btn mx-1 px-4 nav_btn my-2 w-100" id="reset_mobile">Reset</button>
+          </li>
+          <li class="nav-item d-none d-lg-block">
+            <button class="btn mx-1 px-4 nav_btn my-2 my-lg-0" id="kill_desktop">Kill<br><span style="font-size: 10px;">ctrl + alt + [Q]</span></button>
+          </li>
+          <li class="nav-item d-block d-lg-none">
+            <button class="btn mx-1 px-4 nav_btn my-2 w-100" id="kill_mobile">Kill</button>
+          </li>
+          <li class="nav-item d-none d-lg-block">
+            <button class="btn mx-1 px-4 nav_btn my-2 my-lg-0" id="eof_desktop">EOF<br><span style="font-size: 10px;">ctrl + alt + [D]</span></button>
+          </li>
+          <li class="nav-item d-block d-lg-none">
+            <button class="btn mx-1 px-4 nav_btn my-2 w-100" id="eof_mobile">EOF</button>
+          </li>
+          <li class="nav-item d-none d-lg-block">
+            <button class="btn mx-1 px-4 nav_btn my-2 my-lg-0" id="clear_log_desktop">Clear<br><span style="font-size: 10px;">ctrl + alt + [C]</span></button>
+          </li>
+          <li class="nav-item d-block d-lg-none">
+            <button class="btn mx-1 px-4 nav_btn my-2 w-100" id="clear_log_mobile">Clear</button>
+          </li>
+        </ul>
       </div>
     </div>
-
-    <!-- Input -->
-    <div class="bg-dark mt-4 fixed-bottom d-none" style="border-radius: 20px 20px 0px 0px; padding: 10px;" id="input_bar">
-
-      <div class="input-group">
-        <span class="input-group-text bg-dark border-dark" style="color: #0f0; border-radius: 0;" id="input_bar_user_name"></span>
-        <input type="text" id="user_input_field" class="form-control bg-dark border-dark" style="color: #0b0">
-      </div>
-
+  </nav>
+  <div class="container-fluid">
+    <div class="row green_text" id="content" style="height: 100vh;"></div>
+  </div>
+  <div class="bg-dark mt-4 fixed-bottom" style="border-radius: 20px 20px 0px 0px; padding: 10px;" id="input_bar">
+    <div class="input-group">
+      <span class="input-group-text bg-dark border-dark green_text" style="border-radius: 0;">you@cosrv:~$</span>
+      <input type="text" id="user_input_field" class="form-control bg-dark input_border" style="color: #0f0;">
     </div>
-
-    <div class="modal" tabindex="-1" id="user_name_modal">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Set yout display name</h5>
-          </div>
-          <div class="modal-body">
-            <input type="text" class="form-control" placeholder="btw_i_use_arch" id="user_name_input_field" required>
-            <div class="invalid-feedback">
-              Has to be... lets say between 1 and 20 chars:)
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-primary" id="user_name_submit_btn">Set</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </body>
+  </div>
+</body>
 </html>
