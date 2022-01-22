@@ -55,7 +55,6 @@ function main() {
   $('#user_input_field').bind("keyup", function(event) {
     if (event.keyCode === 13) {
       event.preventDefault();
-      //$('#output_log').append(getNewInputOutputHTML(user_name, $('#user_input_field').val()));
       window.scrollTo(0,document.body.scrollHeight);
       socket.send(JSON.stringify({'type': 'stdin', 'data': `${$('#user_input_field').val()}\n`}));
       $('#user_input_field').val('');
@@ -130,14 +129,36 @@ function clearOutput()
 
 function processMessage(msg)
 {
-  if (!(msg.from in content)){content[msg.from] = [];}
-  if (msg.type == "stdout")
+  if (!(msg.from in content))
   {
-    content[msg.from].push(msg.data);
+    content[msg.from] = {};
+    content[msg.from]["data"] = "";
+    content[msg.from]["open_exit"] = false;
   }
+
   if (msg.type == "exit")
   {
-    content[msg.from].push(`<span style="font-style: italic;">Exit: return code (${msg.code})</span>`);
+    if (content[msg.from]["open_exit"]) {
+      content[msg.from]["data"] += `<span style="font-style: italic;">${msg.code}</span>`;
+    }
+    else {
+      content[msg.from]["data"] += `<span style="font-style: italic;">(Exit code) ${msg.code}</span>`;
+      content[msg.from]["open_exit"] = true;
+    }
+  }
+  else if (msg.type == "stderr") {
+    if (content[msg.from]["open_exit"]) {
+      content[msg.from]["open_exit"] = false;
+      content[msg.from]["data"] += "<hr>";
+    }
+    content[msg.from]["data"] += `<span style="color: #f40f0f;">${msg.data}</span>`;
+  }
+  else {
+    if (content[msg.from]["open_exit"]) {
+      content[msg.from]["open_exit"] = false;
+      content[msg.from]["data"] += "<hr>";
+    }
+    content[msg.from]["data"] += msg.data;
   }
 
   updateClients();
@@ -186,42 +207,26 @@ function updateContent()
     `
     <div class="col-12 col-lg-3 client_col">
       <div>
-        <h5 style="margin-top: 90px;">Comparing ${Object.keys(content)[second_id]}</h5>
+        <h5 style="margin-top: 90px;">Comparing <span style="text-decoration: underline;">${Object.keys(content)[second_id]}</span></h5>
         <hr>
-        <div id="client_${second_id}" style="white-space: pre-line;"></div>
+        <div id="client_${second_id}" style="white-space: pre-line;">${content[Object.keys(content)[second_id]]["data"]}</div>
       </div>
     </div>
     `
   );
-  for (var i = 0; i < content[Object.keys(content)[second_id]].length; i++) {
-    if (content[Object.keys(content)[second_id]][i] != "") {
-      $(`#client_${second_id}`).append(content[Object.keys(content)[second_id]][i]);
-      $(`#client_${second_id}`).append("<hr>");
-    }
-
-    if (content[Object.keys(content)[main_id]][i] != undefined) {
-      MergeResults(content[Object.keys(content)[second_id]][i], content[Object.keys(content)[main_id]][i]);
-    }
-  }
   // Set second cols
   $('#content').append(
     `
     <div class="col-12 col-lg-3 client_col">
       <div>
-        <h5 style="margin-top: 90px;">to ${Object.keys(content)[main_id]} (main)</h5>
+        <h5 style="margin-top: 90px;">to <span style="text-decoration: underline;">${Object.keys(content)[main_id]}</span> (main)</h5>
         <hr>
-        <div id="client_${main_id}" style="white-space: pre-line;"></div>
+        <div id="client_${main_id}" style="white-space: pre-line;">${content[Object.keys(content)[main_id]]["data"]}</div>
       </div>
     </div>
     `
   );
-  for (var i = 0; i < content[Object.keys(content)[main_id]].length; i++) {
-    if (content[Object.keys(content)[main_id]][i] != "") {
-      $(`#client_${main_id}`).append(content[Object.keys(content)[main_id]][i]);
-      $(`#client_${main_id}`).append("<hr>");
-    }
-  }
-
+  MergeResults(content[Object.keys(content)[second_id]]["data"], content[Object.keys(content)[main_id]]["data"]);
   window.scrollTo(0,document.body.scrollHeight);
 }
 
@@ -248,4 +253,5 @@ function printToDiffSection(diff)
     }
   });
   $('#diff_content').append(`<hr>`);
+  $('#diff_content').append(`<br><br>&nbsp;`);
 }
