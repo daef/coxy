@@ -1,5 +1,8 @@
-let log_counter = 0;
-let open_blob = false;
+document.addEventListener('DOMContentLoaded', main, false);
+var content = new Object;
+var main_id = -1;
+var second_id = -1;
+const startmessage = `<div id="start_message" style="display: grid; place-items: center;"><p style="margin-top: 100px; text-align: center;">Please select two connected clients to compare their output<br>(You have to send some data to get clients to select)</p></div>`;
 
 function get_ws_uri() {
   var loc = window.location, uri
@@ -14,8 +17,6 @@ function get_ws_uri() {
 }
 
 function main() {
-  let user_name = "";
-
   const socket = new WebSocket(get_ws_uri())
   socket.addEventListener('open', function (event) {
     socket.send(JSON.stringify({'type': 'subscribe', 'filter': 'stdout|stderr|exit|hello'}))
@@ -23,110 +24,233 @@ function main() {
   socket.addEventListener('message', function (event) {
     msg = JSON.parse(event.data)
     console.log(msg);
-    printMsg(msg);
+    processMessage(msg);
   })
 
-  var user_name_modal = new bootstrap.Modal(document.getElementById('user_name_modal'), {
-    keyboard: false,
-    backdrop: 'static',
-    focus: true,
-  });
-
-  $('#reset').bind('click', function(event) {
+  $('#reset_desktop').bind('click', function(event) {
     socket.send(JSON.stringify({'type': 'reset'}))
   })
-  $('#kill').bind('click', function(event) {
+  $('#reset_mobile').bind('click', function(event) {
+    socket.send(JSON.stringify({'type': 'reset'}))
+  })
+  $('#kill_desktop').bind('click', function(event) {
     socket.send(JSON.stringify({'type': 'kill'}))
   })
-  $('#send_EOF').bind('click', function(event) {
+  $('#kill_mobile').bind('click', function(event) {
+    socket.send(JSON.stringify({'type': 'kill'}))
+  })
+  $('#eof_desktop').bind('click', function(event) {
     socket.send(JSON.stringify({'type': 'eof'}))
   })
-
-  $('#clear_log').bind('click', function(event) {
-    $('#output_log').html("")
+  $('#eof_mobile').bind('click', function(event) {
+    socket.send(JSON.stringify({'type': 'eof'}))
+  })
+  $('#clear_log_desktop').bind('click', function(event) {
+    clearOutput();
+  })
+  $('#clear_log_mobile').bind('click', function(event) {
+    clearOutput();
   })
 
   $('#user_input_field').bind("keyup", function(event) {
     if (event.keyCode === 13) {
       event.preventDefault();
-      $('#output_log').append(getNewInputOutputHTML(user_name, $('#user_input_field').val()));
-      open_blob = true;
       window.scrollTo(0,document.body.scrollHeight);
-      socket.send(JSON.stringify({'type': 'stdin', 'data': `${$('#user_input_field').val()}\n`, 'from': user_name}))
+      socket.send(JSON.stringify({'type': 'stdin', 'data': `${$('#user_input_field').val()}\n`}));
       $('#user_input_field').val('');
     }
-  });
+  })
 
-  $('#user_name_input_field').bind("keyup", function(event) {
-    if (event.keyCode === 13) {
-      event.preventDefault();
-      user_name = $( '#user_name_input_field' ).val();
-      if (user_name.length > 0 && user_name.length < 20)
-      {
-        console.log(`Set user_name: ${user_name}`);
-        $('#user_input_field').val('');
-        user_name_modal.hide();
-        $('#user_name_input_field').val('');
-        $('#input_bar_user_name').text(`${user_name}@coxy:~$`);
-        $('#input_bar').removeClass("d-none");
-        $('#user_name_input_field').removeClass("is-invalid");
-        $('#user_input_field').focus();
-      }
-      else { $('#user_name_input_field').addClass("is-invalid"); }
+  // Keycombos
+  document.addEventListener('keydown', function(event) {
+    if (event.shiftKey && event.altKey && event.keyCode == 82) {
+      socket.send(JSON.stringify({'type': 'reset'}));
+      $("#reset_desktop").css("background-color", "white");
+      setTimeout(function(){
+        $("#reset_desktop").css("background-color", "#1e4018")
+      }, 400);
+    }
+    if (event.shiftKey && event.altKey && event.keyCode == 81) {
+      socket.send(JSON.stringify({'type': 'kill'}));
+      $("#kill_desktop").css("background-color", "white");
+      setTimeout(function(){
+        $("#kill_desktop").css("background-color", "#1e4018")
+      }, 400);
+    }
+    if (event.shiftKey && event.altKey && event.keyCode == 68) {
+      socket.send(JSON.stringify({'type': 'eof'}));
+      $("#eof_desktop").css("background-color", "white");
+      setTimeout(function(){
+        $("#eof_desktop").css("background-color", "#1e4018")
+      }, 400);
+    }
+    if (event.shiftKey && event.altKey && event.keyCode == 67) {
+      $("#clear_log_desktop").css("background-color", "white");
+      setTimeout(function(){
+        $("#clear_log_desktop").css("background-color", "#1e4018")
+      }, 400);
+      clearOutput();
     }
   });
 
-  $('#user_name_submit_btn').bind("click", function(event) {
-    var e = jQuery.Event("keyup");
-    e.keyCode = 13;
-    $("#user_name_input_field").trigger(e);
-  });
-
-  $(document).ready(function(){
-      user_name_modal.show();
-      $( "#user_name_input_field" ).focus();
-  });
+  $('#content').html(startmessage);
 }
 
-function printMsg(msg)
+function select_comparison_second(id)
 {
-  if (msg.type == "stdout")
+  //console.log("Set comparison second id: " + id);
+  second_id = id;
+  $('#second_id_label').html(Object.keys(content)[second_id]);
+  checkCompareable();
+}
+
+function select_comparison_main(id)
+{
+  //console.log("Set comparison main id: " + id);
+  main_id = id;
+  $('#main_id_label').html(Object.keys(content)[main_id]);
+  checkCompareable();
+}
+
+function checkCompareable()
+{
+  if (main_id >= 0 && second_id >= 0 && main_id != second_id) {
+    //console.log(`=> Comparing ${Object.keys(content)[second_id]} to ${Object.keys(content)[main_id]}`);
+    updateContent();
+  }
+}
+
+function clearOutput()
+{
+  //console.log("Clearing output view");
+  $('#content').html(startmessage);
+  content = new Object;
+}
+
+function processMessage(msg)
+{
+  if (!(msg.from in content))
   {
-    if(open_blob)
-    {
-      $('#o_'+log_counter).html(msg.data);
-      log_counter++;
-      open_blob = false;
+    content[msg.from] = {};
+    content[msg.from]["data"] = "";
+    content[msg.from]["open_exit"] = false;
+  }
+
+  if (msg.type == "exit")
+  {
+    if (content[msg.from]["open_exit"]) {
+      content[msg.from]["data"] += `<span style="font-style: italic;">${msg.code}</span>`;
     }
-    else {$('#output_log').append(getNewOutputHTML(msg.data))}
-    window.scrollTo(0,document.body.scrollHeight);
+    else {
+      content[msg.from]["data"] += `<span style="font-style: italic;">(Exit code) ${msg.code}</span>`;
+      content[msg.from]["open_exit"] = true;
+    }
   }
-  if (msg.type == "stdin")
-  {
-    log_counter++;
-    $('#output_log').append(getNewInputOutputHTML(msg.from, msg.data));
-    window.scrollTo(0,document.body.scrollHeight);
+  else if (msg.type == "stderr") {
+    if (content[msg.from]["open_exit"]) {
+      content[msg.from]["open_exit"] = false;
+      content[msg.from]["data"] += "<hr>";
+    }
+    content[msg.from]["data"] += `<span style="color: #f40f0f;">${msg.data}</span>`;
+  }
+  else {
+    if (content[msg.from]["open_exit"]) {
+      content[msg.from]["open_exit"] = false;
+      content[msg.from]["data"] += "<hr>";
+    }
+    content[msg.from]["data"] += msg.data;
+  }
+
+  updateClients();
+  checkCompareable();
+}
+
+function updateClients()
+{
+  $('#compare_drop_down_selects').html("");
+  $('#main_drop_down_selects').html("");
+  var client_id = 0;
+  for (const [key, value] of Object.entries(content)) {
+    //console.log(value);
+    $('#compare_drop_down_selects').append(
+      `
+      <li><a class="dropdown-item green_text" onclick="select_comparison_second(${client_id});">${key}</a></li>
+      `
+    );
+    $('#main_drop_down_selects').append(
+      `
+      <li><a class="dropdown-item green_text" onclick="select_comparison_main(${client_id});">${key}</a></li>
+      `
+    );
+    client_id++;
   }
 }
 
-function getNewInputOutputHTML(user, input) {
-  const evt_msg_html = `
-  <div class="output_elem bg-dark" style="border-radius: 20px;">
-    <p class="output_elem_title" style="color: #0f0; padding: 10px 20px 0px 20px;">${user}@coxy:~$ ${input}</p>
-    <p class="output_elem_content" style="color: white; padding: 0px 20px 10px 20px;" id="o_${log_counter}"><span style='font-style: italic; color: #dedede;'>No output (yet).</span></p>
-  </div>
-`;
-  return evt_msg_html;
+function updateContent()
+{
+  $('#content').html("");
+  var conn_i = 0;
+  // Set diff cols
+  $('#content').append(
+    `
+    <div class="col-12 col-lg-6 client_col">
+      <div>
+        <h5 style="margin-top: 90px;">Difference to main</h5>
+        <hr>
+        <div id="diff_content" style="white-space: pre-line;"></div>
+      </div>
+    </div>
+    `
+  );
+  // Set main cols
+  $('#content').append(
+    `
+    <div class="col-12 col-lg-3 client_col">
+      <div>
+        <h5 style="margin-top: 90px;">Comparing <span style="text-decoration: underline;">${Object.keys(content)[second_id]}</span></h5>
+        <hr>
+        <div id="client_${second_id}" style="white-space: pre-line;">${content[Object.keys(content)[second_id]]["data"]}</div>
+      </div>
+    </div>
+    `
+  );
+  // Set second cols
+  $('#content').append(
+    `
+    <div class="col-12 col-lg-3 client_col">
+      <div>
+        <h5 style="margin-top: 90px;">to <span style="text-decoration: underline;">${Object.keys(content)[main_id]}</span> (main)</h5>
+        <hr>
+        <div id="client_${main_id}" style="white-space: pre-line;">${content[Object.keys(content)[main_id]]["data"]}</div>
+      </div>
+    </div>
+    `
+  );
+  MergeResults(content[Object.keys(content)[second_id]]["data"], content[Object.keys(content)[main_id]]["data"]);
+  window.scrollTo(0,document.body.scrollHeight);
 }
 
-function getNewOutputHTML(output) {
-  const evt_msg_html = `
-  <div class="output_elem bg-dark" style="border-radius: 20px;">
-  <p class="output_elem_title" style="color: #0f0; padding: 10px 20px 0px 20px;">another_user@coxy:~$ some input</p>
-  <p class="output_elem_content" style="color: white; padding: 0px 20px 10px 20px;">${output}</p>
-  </div>
-`;
-  return evt_msg_html;
+function MergeResults(res1, res2)
+{
+  //console.log("Merging outputs:");
+  var dmp = new diff_match_patch();
+  var diff = dmp.diff_main(res1, res2);
+  dmp.diff_cleanupSemantic(diff);
+  printToDiffSection(diff);
 }
 
-main()
+function printToDiffSection(diff)
+{
+  diff.forEach((item, index) => {
+    if (item[0] == 0) {
+      $('#diff_content').append(`<span class="common">${item[1]}</span>`);
+    }
+    if (item[0] == 1) {
+      $('#diff_content').append(`<span class="add">${item[1]}</span>`);
+    }
+    if (item[0] == -1) {
+      $('#diff_content').append(`<span class="del">${item[1]}</span>`);
+    }
+  });
+  $('#diff_content').append(`<hr><br><br>&nbsp;`);
+}
